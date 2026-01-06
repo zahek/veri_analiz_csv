@@ -34,12 +34,8 @@
         
         /* Sürükle Bırak Stilleri */
         .drop-zone--over { border-color: #4f46e5; background-color: #eef2ff; }
-        
-        /* Tablo Header Sürükleme */
         th[draggable="true"] { cursor: grab; }
-        th[draggable="true"]:active { cursor: grabbing; }
-        .th-dragging { opacity: 0.4; background-color: #e0e7ff !important; border: 2px dashed #4f46e5 !important; }
-        .th-drag-over { background-color: #eef2ff !important; border-left: 3px solid #4f46e5 !important; }
+        .dragging { opacity: 0.5; background-color: #f1f5f9 !important; }
         
         /* Tablo Stilleri */
         .column-filter-select {
@@ -68,11 +64,6 @@
             <button onclick="document.getElementById('csvFileInput').click()" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-2">
                 <i data-lucide="upload" class="w-4 h-4"></i> <span class="hidden sm:inline">Yeni Dosya</span>
             </button>
-            <div class="h-6 w-px bg-gray-200"></div>
-            <div class="text-xs text-right hidden sm:block">
-                <p class="font-semibold text-slate-700">EMMC Danışmanlık</p>
-                <p class="text-slate-400">Analiz Aracı v2.5</p>
-            </div>
         </div>
     </nav>
 
@@ -195,12 +186,33 @@
                     <div class="lg:col-span-3 space-y-6">
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="kpiContainer"></div>
                         <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group">
-                            <div class="flex justify-between items-center mb-6"><h3 class="font-bold text-slate-700" id="chartTitle">Analiz Grafiği</h3><button onclick="downloadChartPDF()" class="text-xs bg-white border border-gray-300 hover:bg-gray-50 hover:text-red-600 text-slate-600 font-medium py-1.5 px-3 rounded-lg shadow-sm transition-all flex items-center gap-2"><i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF İndir</button></div>
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="font-bold text-slate-700" id="chartTitle">Analiz Grafiği</h3>
+                                <div class="flex gap-2">
+                                    <button onclick="downloadDashboardExcel()" class="text-xs bg-green-50 text-green-600 border border-green-200 hover:bg-green-100 font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-2">
+                                        <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Excel İndir
+                                    </button>
+                                    <button onclick="downloadChartPDF()" class="text-xs bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold py-1.5 px-3 rounded-lg transition-colors flex items-center gap-2">
+                                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> PDF İndir
+                                    </button>
+                                </div>
+                            </div>
                             <div class="h-80 w-full relative" id="chartWrapper"><canvas id="mainChart"></canvas></div>
                         </div>
                         <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50"><h4 class="font-semibold text-sm text-slate-700">Grafik Verisi (Özet)</h4></div>
-                            <div class="overflow-x-auto max-h-64 custom-scrollbar"><table class="w-full text-sm text-left"><thead class="bg-white text-xs text-slate-500 uppercase sticky top-0 shadow-sm"><tr><th class="px-6 py-3 font-medium">Etiket</th><th class="px-6 py-3 font-medium">Grup</th><th class="px-6 py-3 font-medium text-right">Değer</th></tr></thead><tbody id="summaryTableBody" class="divide-y divide-gray-100 text-slate-600"></tbody></table></div>
+                            <div class="overflow-x-auto max-h-64 custom-scrollbar">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-white text-xs text-slate-500 uppercase sticky top-0 shadow-sm">
+                                        <tr>
+                                            <th onclick="sortDashboardTable('label')" class="px-6 py-3 font-medium cursor-pointer hover:bg-gray-50">Etiket <i data-lucide="chevrons-up-down" class="w-3 h-3 inline"></i></th>
+                                            <th onclick="sortDashboardTable('group')" class="px-6 py-3 font-medium cursor-pointer hover:bg-gray-50">Grup <i data-lucide="chevrons-up-down" class="w-3 h-3 inline"></i></th>
+                                            <th onclick="sortDashboardTable('value')" class="px-6 py-3 font-medium text-right cursor-pointer hover:bg-gray-50">Değer <i data-lucide="chevrons-up-down" class="w-3 h-3 inline"></i></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="summaryTableBody" class="divide-y divide-gray-100 text-slate-600"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -217,20 +229,11 @@
                             <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Gruplama (Ref / Dosya)</label><select id="profitFileCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2"></select></div>
                             <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Gelir Sütunu (+)</label><select id="profitIncomeCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-green-500 focus:ring-green-500 bg-green-50 border p-2"></select></div>
                             <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Gider Sütunu (-)</label><select id="profitExpenseCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-red-500 focus:ring-red-500 bg-red-50 border p-2"></select></div>
-                            
                             <div class="h-px bg-gray-100"></div>
-                            
                             <div><label class="block text-[10px] text-slate-400 mb-1">Müşteri (Opsiyonel)</label><select id="profitCustomerCol" class="w-full text-xs border-gray-300 rounded shadow-sm bg-gray-50 border p-1.5"></select></div>
                             <div><label class="block text-[10px] text-slate-400 mb-1">Taşıyıcı (Opsiyonel)</label><select id="profitCarrierCol" class="w-full text-xs border-gray-300 rounded shadow-sm bg-gray-50 border p-1.5"></select></div>
                             <div><label class="block text-[10px] text-slate-400 mb-1">Para Birimi (Opsiyonel)</label><select id="profitCurrencyCol" class="w-full text-xs border-gray-300 rounded shadow-sm bg-gray-50 border p-1.5"></select></div>
-                            
-                            <!-- YENİ: Limit Ayarı -->
-                            <div class="pt-2 border-t border-gray-100">
-                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Limit (Top N)</label>
-                                <input type="number" id="profitLimit" value="20" min="0" placeholder="0 = Hepsi" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2">
-                                <p class="text-[10px] text-gray-400 mt-1 italic">0 veya boş bırakılırsa tümünü gösterir.</p>
-                            </div>
-
+                            <div class="pt-2 border-t border-gray-100"><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Limit (Top N)</label><input type="number" id="profitLimit" value="20" min="0" placeholder="0 = Hepsi" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2"><p class="text-[10px] text-gray-400 mt-1 italic">0 veya boş bırakılırsa tümünü gösterir.</p></div>
                             <button onclick="runProfitAnalysis()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 mt-2">
                                 <i data-lucide="play" class="w-4 h-4"></i> Analizi Çalıştır
                             </button>
@@ -287,6 +290,15 @@
         <i data-lucide="info" class="w-5 h-5" id="toastIcon"></i> <span id="toastMsg">Bildirim</span>
     </div>
 
+    <footer class="mt-8 text-center text-slate-400 text-sm space-y-2 pb-6">
+        <p>Verileriniz tarayıcınızda yerel olarak işlenir. Sunucuya aktarılmaz.</p>
+        <div class="pt-4 border-t border-slate-200 max-w-md mx-auto">
+            <p class="font-bold text-slate-600 text-base">EMMC Danışmanlık</p>
+            <p class="text-xs text-slate-500 mb-1">Analiz Aracı v2.6</p>
+            <p class="text-xs">© 2025 Tüm Hakları Saklıdır.</p>
+        </div>
+    </footer>
+
     <script>
         lucide.createIcons();
 
@@ -305,6 +317,10 @@
         let draggedColumn = null;
         
         let profitResults = [];
+
+        // Yeni Dashboard Global Değişkenleri
+        let dashboardSummaryData = [];
+        let dashboardSortConfig = { key: null, direction: 'asc' };
 
         // DOM ELEMENTS
         const uploadScreen = document.getElementById('uploadScreen');
@@ -393,103 +409,46 @@
                 const th = document.createElement('th');
                 th.setAttribute('draggable', true); 
                 th.setAttribute('data-col', col);
-                
                 th.className = "px-4 py-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors group select-none relative";
                 
-                // Sorting
                 th.addEventListener('click', (e) => {
-                    // Prevent sort if selecting options or clicking dropdown
                     if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION') {
                         handleSort(col);
                     }
                 });
 
-                // Drag & Drop Handlers
                 th.addEventListener('dragstart', handleDragStart);
                 th.addEventListener('dragover', handleDragOver);
                 th.addEventListener('dragleave', handleDragLeave);
                 th.addEventListener('drop', handleDrop);
                 th.addEventListener('dragend', handleDragEnd);
 
-                th.innerHTML = `
-                    <div class="flex items-center justify-between gap-2 pointer-events-none">
-                        <span class="truncate font-bold text-slate-700">${col}</span>
-                        <div class="flex flex-col opacity-30 group-hover:opacity-100">
-                            <i data-lucide="chevron-up" class="w-2 h-2 -mb-0.5"></i>
-                            <i data-lucide="chevron-down" class="w-2 h-2"></i>
-                        </div>
-                    </div>
-                    <div class="mt-2" onmousedown="event.stopPropagation()">
-                        <select class="w-full text-[10px] p-1 border border-gray-200 rounded bg-white focus:ring-1 focus:ring-indigo-500 column-filter" data-col="${col}">
-                            <option value="">Tümü</option>
-                        </select>
-                    </div>
-                `;
+                th.innerHTML = `<div class="flex items-center justify-between gap-2 pointer-events-none"><span class="truncate font-bold text-slate-700">${col}</span><div class="flex flex-col opacity-30 group-hover:opacity-100"><i data-lucide="chevron-up" class="w-2 h-2 -mb-0.5"></i><i data-lucide="chevron-down" class="w-2 h-2"></i></div></div><div class="mt-2" onmousedown="event.stopPropagation()"><select class="w-full text-[10px] p-1 border border-gray-200 rounded bg-white focus:ring-1 focus:ring-indigo-500 column-filter" data-col="${col}"><option value="">Tümü</option></select></div>`;
                 
-                // Populate Filters
                 const uniqueVals = [...new Set(rawData.map(r => r[col]))].filter(Boolean).sort();
                 const select = th.querySelector('select');
-                uniqueVals.slice(0, 100).forEach(v => { 
-                    const opt = document.createElement('option'); 
-                    opt.value = v; 
-                    opt.textContent = v; 
-                    if(columnFilters[col] === String(v)) opt.selected = true;
-                    select.appendChild(opt); 
-                });
-                
-                select.addEventListener('change', (e) => { 
-                    columnFilters[col] = e.target.value; 
-                    currentPage = 1; 
-                    applyTableFilters(); 
-                });
-                
+                uniqueVals.slice(0, 100).forEach(v => { const opt = document.createElement('option'); opt.value = v; opt.textContent = v; if(columnFilters[col] === String(v)) opt.selected = true; select.appendChild(opt); });
+                select.addEventListener('change', (e) => { columnFilters[col] = e.target.value; currentPage = 1; applyTableFilters(); });
                 tr.appendChild(th);
             });
-            thead.appendChild(tr); 
-            lucide.createIcons();
+            thead.appendChild(tr); lucide.createIcons();
         }
 
-        // Drag Handler Functions
-        function handleDragStart(e) {
-            draggedColumn = this.getAttribute('data-col');
-            e.dataTransfer.effectAllowed = 'move';
-            e.dataTransfer.setData('text/plain', draggedColumn);
-            this.classList.add('th-dragging');
-        }
-
-        function handleDragOver(e) {
-            if (e.preventDefault) e.preventDefault(); 
-            e.dataTransfer.dropEffect = 'move';
-            this.classList.add('th-drag-over');
-            return false;
-        }
-
-        function handleDragLeave(e) {
-            this.classList.remove('th-drag-over');
-        }
-
+        function handleDragStart(e) { draggedColumn = this.getAttribute('data-col'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', draggedColumn); this.classList.add('th-dragging'); }
+        function handleDragOver(e) { if (e.preventDefault) e.preventDefault(); e.dataTransfer.dropEffect = 'move'; this.classList.add('th-drag-over'); return false; }
+        function handleDragLeave(e) { this.classList.remove('th-drag-over'); }
         function handleDrop(e) {
             if (e.stopPropagation) e.stopPropagation();
             this.classList.remove('th-drag-over');
-            
             const targetColumn = this.getAttribute('data-col');
-            
             if (draggedColumn && targetColumn && draggedColumn !== targetColumn) {
-                const fromIdx = columns.indexOf(draggedColumn);
-                const toIdx = columns.indexOf(targetColumn);
-                
+                const fromIdx = columns.indexOf(draggedColumn); const toIdx = columns.indexOf(targetColumn);
                 columns.splice(toIdx, 0, columns.splice(fromIdx, 1)[0]);
-                
-                renderTableHeader();
-                renderTableBody();
+                renderTableHeader(); renderTableBody();
             }
             return false;
         }
-
-        function handleDragEnd(e) {
-            this.classList.remove('th-dragging');
-            document.querySelectorAll('th').forEach(th => th.classList.remove('th-drag-over'));
-        }
+        function handleDragEnd(e) { this.classList.remove('th-dragging'); document.querySelectorAll('th').forEach(th => th.classList.remove('th-drag-over')); }
 
         function applyTableFilters() {
             const term = globalSearch.value.toLowerCase();
@@ -587,7 +546,22 @@
             
             renderChart(labels, datasets);
             updateKPICards(filteredData, yCol, groupCol);
-            updateSummaryTable(labels, datasets);
+            
+            // Dashboard Summary Data Hazırlama
+            dashboardSummaryData = [];
+            labels.forEach((label, i) => {
+                datasets.forEach(ds => {
+                    const val = ds.data[i];
+                    if (val !== undefined && val !== 0) {
+                        dashboardSummaryData.push({
+                            label: label,
+                            group: ds.label,
+                            value: val
+                        });
+                    }
+                });
+            });
+            renderDashboardTable();
         }
         function renderChart(labels, datasets) {
             const ctx = document.getElementById('mainChart').getContext('2d');
@@ -603,9 +577,53 @@
             createCard(container, `Benzersiz ${groupCol || 'Grup'}`, uniqueGroups, "layers", "bg-purple-50 text-purple-600");
         }
         function createCard(c, t, v, i, cl) { c.innerHTML += `<div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between"><div><p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">${t}</p><p class="text-xl font-bold text-slate-800 mt-1">${v}</p></div><div class="p-3 rounded-lg ${cl}"><i data-lucide="${i}" class="w-5 h-5"></i></div></div>`; lucide.createIcons(); }
-        function updateSummaryTable(labels, datasets) {
-            const b = document.getElementById('summaryTableBody'); b.innerHTML = "";
-            labels.forEach((l, i) => datasets.forEach(d => { if(d.data[i]){ b.innerHTML += `<tr class="border-b border-gray-50 hover:bg-gray-50"><td class="px-6 py-2 text-xs font-medium text-slate-700">${l}</td><td class="px-6 py-2 text-xs"><span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold text-[10px]">${d.label}</span></td><td class="px-6 py-2 text-right font-bold text-slate-700 text-xs">${new Intl.NumberFormat('tr-TR').format(d.data[i])}</td></tr>`; } }));
+        
+        // --- DASHBOARD TABLE SORT & RENDER ---
+        function renderDashboardTable() {
+            const tbody = document.getElementById('summaryTableBody');
+            tbody.innerHTML = "";
+            
+            dashboardSummaryData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-50 hover:bg-gray-50 transition-colors";
+                tr.innerHTML = `
+                    <td class="px-6 py-2 font-medium text-slate-700 text-xs">${row.label}</td>
+                    <td class="px-6 py-2 text-xs"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700">${row.group}</span></td>
+                    <td class="px-6 py-2 text-right font-bold text-slate-700 text-xs">${new Intl.NumberFormat('tr-TR').format(row.value)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function sortDashboardTable(key) {
+            if (dashboardSortConfig.key === key) {
+                dashboardSortConfig.direction = dashboardSortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                dashboardSortConfig.key = key;
+                dashboardSortConfig.direction = 'asc';
+            }
+            
+            dashboardSummaryData.sort((a, b) => {
+                let valA = a[key];
+                let valB = b[key];
+                
+                // String ise lowercase yap
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                
+                if (valA < valB) return dashboardSortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return dashboardSortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            renderDashboardTable();
+        }
+
+        function downloadDashboardExcel() {
+            if (!dashboardSummaryData.length) return;
+            const ws = XLSX.utils.json_to_sheet(dashboardSummaryData.map(r => ({ "Etiket": r.label, "Grup": r.group, "Değer": r.value })));
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Grafik Verisi");
+            const dateStr = new Date().toLocaleDateString('tr-TR').replace(/\./g, '_');
+            XLSX.writeFile(wb, `Grafik_Raporu_${dateStr}.xlsx`);
         }
 
         // --- PROFIT/LOSS LOGIC ---
@@ -615,202 +633,88 @@
                 const el = document.getElementById(id); 
                 el.innerHTML = '<option value="">Seçiniz...</option>';
                 columns.forEach(col => { const opt = document.createElement('option'); opt.value = col; opt.textContent = col; el.appendChild(opt); });
-                // Remove existing listeners if any
-                const newEl = el.cloneNode(true);
-                el.parentNode.replaceChild(newEl, el);
-                newEl.addEventListener('change', runProfitAnalysis);
+                const newEl = el.cloneNode(true); el.parentNode.replaceChild(newEl, el); newEl.addEventListener('change', runProfitAnalysis);
             });
-            // Limit değiştiğinde de çalışsın
-            const limitInput = document.getElementById('profitLimit');
-            const newLimitInput = limitInput.cloneNode(true);
-            limitInput.parentNode.replaceChild(newLimitInput, limitInput);
-            newLimitInput.addEventListener('input', debounce(runProfitAnalysis, 500));
-
+            const limitInput = document.getElementById('profitLimit'); const newLimitInput = limitInput.cloneNode(true); limitInput.parentNode.replaceChild(newLimitInput, limitInput); newLimitInput.addEventListener('input', debounce(runProfitAnalysis, 500));
             autoSelectProfitOptions();
         }
-        
         function autoSelectProfitOptions() {
             const find = (keywords) => columns.find(c => keywords.some(k => c.toLowerCase().includes(k)));
             const setVal = (id, keywords) => { const col = find(keywords); if(col) document.getElementById(id).value = col; return col; };
-            
-            // LOJ kelimesine öncelik ver
-            let fileCol = columns.find(c => c.toUpperCase().includes("LOJ"));
-            if(!fileCol) fileCol = find(['dosya', 'file', 'ref', 'fiş', 'no']);
-            if(fileCol) document.getElementById('profitFileCol').value = fileCol;
-
+            let fileCol = columns.find(c => c.toUpperCase().includes("LOJ")); if(!fileCol) fileCol = find(['dosya', 'file', 'ref', 'fiş', 'no']); if(fileCol) document.getElementById('profitFileCol').value = fileCol;
             const incCol = setVal('profitIncomeCol', ['gelir', 'satış', 'alacak', 'income', 'revenue', 'tutar']);
-            setVal('profitExpenseCol', ['gider', 'maliyet', 'borç', 'alış', 'expense', 'cost']);
-            setVal('profitCustomerCol', ['müşteri', 'customer', 'alıcı', 'cari']);
-            setVal('profitCarrierCol', ['taşıyıcı', 'carrier', 'nakliye', 'plaka']);
-            setVal('profitCurrencyCol', ['döviz', 'para', 'birim', 'curr']);
-
-            if (fileCol && incCol) {
-                runProfitAnalysis();
-                showToast("Analiz otomatik başlatıldı.", "success");
-            }
+            setVal('profitExpenseCol', ['gider', 'maliyet', 'borç', 'alış', 'expense', 'cost']); setVal('profitCustomerCol', ['müşteri', 'customer', 'alıcı', 'cari']); setVal('profitCarrierCol', ['taşıyıcı', 'carrier', 'nakliye', 'plaka']); setVal('profitCurrencyCol', ['döviz', 'para', 'birim', 'curr']);
+            if (fileCol && incCol) { runProfitAnalysis(); showToast("Analiz otomatik başlatıldı.", "success"); }
         }
-
         function runProfitAnalysis() {
-            const fileCol = document.getElementById('profitFileCol').value;
-            const incomeCol = document.getElementById('profitIncomeCol').value;
-            const expenseCol = document.getElementById('profitExpenseCol').value;
-            const custCol = document.getElementById('profitCustomerCol').value;
-            const carrCol = document.getElementById('profitCarrierCol').value;
-            const currCol = document.getElementById('profitCurrencyCol').value;
-            // Yeni Limit Değeri
-            let limitVal = parseInt(document.getElementById('profitLimit').value);
-            const limit = (isNaN(limitVal) || limitVal < 0) ? 0 : limitVal;
-
+            const fileCol = document.getElementById('profitFileCol').value; const incomeCol = document.getElementById('profitIncomeCol').value; const expenseCol = document.getElementById('profitExpenseCol').value; const custCol = document.getElementById('profitCustomerCol').value; const carrCol = document.getElementById('profitCarrierCol').value; const currCol = document.getElementById('profitCurrencyCol').value;
+            let limitVal = parseInt(document.getElementById('profitLimit').value); const limit = (isNaN(limitVal) || limitVal < 0) ? 0 : limitVal;
             if (!fileCol || !incomeCol) return;
-
             const analysisData = {}; 
-            // rawData üzerinden gidiyoruz
             rawData.forEach(row => {
                 const fileVal = String(row[fileCol] || "").trim();
-                
-                // BOŞ DEĞERLERİ ATLA, AMA "LOJ" ZORUNLULUĞUNU KALDIR
                 if (fileVal) { 
-                    if (!analysisData[fileVal]) {
-                         const curr = currCol ? (row[currCol] || "") : "";
-                         analysisData[fileVal] = { income: 0, expense: 0, currency: curr, customer: "", carrier: "" };
-                    }
-                    if (!analysisData[fileVal].customer && custCol) analysisData[fileVal].customer = row[custCol] || "";
-                    if (!analysisData[fileVal].carrier && carrCol) analysisData[fileVal].carrier = row[carrCol] || "";
-
-                    const inc = parseMoney(row[incomeCol]); if (!isNaN(inc)) analysisData[fileVal].income += inc;
-                    if (expenseCol) { const exp = parseMoney(row[expenseCol]); if (!isNaN(exp)) analysisData[fileVal].expense += exp; }
+                    if (!analysisData[fileVal]) { const curr = currCol ? (row[currCol] || "") : ""; analysisData[fileVal] = { income: 0, expense: 0, currency: curr, customer: "", carrier: "" }; }
+                    if (!analysisData[fileVal].customer && custCol) analysisData[fileVal].customer = row[custCol] || ""; if (!analysisData[fileVal].carrier && carrCol) analysisData[fileVal].carrier = row[carrCol] || "";
+                    const inc = parseMoney(row[incomeCol]); if (!isNaN(inc)) analysisData[fileVal].income += inc; if (expenseCol) { const exp = parseMoney(row[expenseCol]); if (!isNaN(exp)) analysisData[fileVal].expense += exp; }
                 }
             });
-
-            let results = Object.keys(analysisData).map(key => {
-                const d = analysisData[key];
-                return { file: key, customer: d.customer || "-", carrier: d.carrier || "-", currency: d.currency || "-", income: d.income, expense: d.expense, net: d.income - d.expense };
-            }).sort((a, b) => b.net - a.net);
-
-            if (results.length === 0) {
-                document.getElementById('profitTableBody').innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-400">Seçilen sütunlara göre veri bulunamadı.</td></tr>';
-                return;
-            }
-
-            // Apply Limit
-            if (limit > 0) {
-                results = results.slice(0, limit);
-            }
-            
-            profitResults = results; // Update global var for export
-
-            renderProfitTable(profitResults);
-            renderProfitChart(profitResults);
-            renderProfitSummary(profitResults);
-            
-            document.getElementById('btnProfitExcel').disabled = false;
-            document.getElementById('btnProfitPDF').disabled = false;
-            document.getElementById('profitSummaryCard').classList.remove('hidden');
+            let results = Object.keys(analysisData).map(key => { const d = analysisData[key]; return { file: key, customer: d.customer || "-", carrier: d.carrier || "-", currency: d.currency || "-", income: d.income, expense: d.expense, net: d.income - d.expense }; }).sort((a, b) => b.net - a.net);
+            if (results.length === 0) { document.getElementById('profitTableBody').innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-400">Seçilen sütunlara göre veri bulunamadı.</td></tr>'; return; }
+            if (limit > 0) results = results.slice(0, limit);
+            profitResults = results; renderProfitTable(profitResults); renderProfitChart(profitResults); renderProfitSummary(profitResults);
+            document.getElementById('btnProfitExcel').disabled = false; document.getElementById('btnProfitPDF').disabled = false; document.getElementById('profitSummaryCard').classList.remove('hidden');
         }
-
         function renderProfitTable(data) {
-            const tbody = document.getElementById('profitTableBody'); tbody.innerHTML = "";
-            const fragment = document.createDocumentFragment();
-            // İlk 200 kaydı göster (performans için table rendering limiti)
-            // Not: Export tüm datayı (limit dahilinde) alır.
+            const tbody = document.getElementById('profitTableBody'); tbody.innerHTML = ""; const fragment = document.createDocumentFragment();
             data.slice(0, 200).forEach(r => {
-                const tr = document.createElement('tr'); tr.className = "hover:bg-gray-50 border-b border-gray-50 last:border-0";
-                const netClass = r.net >= 0 ? "text-blue-600 font-bold" : "text-red-600 font-bold";
-                tr.innerHTML = `
-                    <td class="px-4 py-2 font-medium text-slate-700 text-xs">${r.file}</td>
-                    <td class="px-4 py-2 text-xs text-slate-500 truncate max-w-[150px]" title="${r.customer}">${r.customer}</td>
-                    <td class="px-4 py-2 text-xs text-slate-500 truncate max-w-[150px]" title="${r.carrier}">${r.carrier}</td>
-                    <td class="px-4 py-2 text-xs text-center italic text-slate-400">${r.currency}</td>
-                    <td class="px-4 py-2 text-right text-xs text-green-600 font-medium">${new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(r.income)}</td>
-                    <td class="px-4 py-2 text-right text-xs text-red-600 font-medium">${new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(r.expense)}</td>
-                    <td class="px-4 py-2 text-right text-xs ${netClass}">${new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(r.net)}</td>
-                `;
-                fragment.appendChild(tr);
-            });
-            tbody.appendChild(fragment);
+                const tr = document.createElement('tr'); tr.className = "hover:bg-gray-50 border-b border-gray-50 last:border-0"; const netClass = r.net >= 0 ? "text-blue-600 font-bold" : "text-red-600 font-bold";
+                tr.innerHTML = `<td class="px-4 py-2 font-medium text-slate-700 text-xs">${r.file}</td><td class="px-4 py-2 text-xs text-slate-500 truncate max-w-[150px]" title="${r.customer}">${r.customer}</td><td class="px-4 py-2 text-xs text-slate-500 truncate max-w-[150px]" title="${r.carrier}">${r.carrier}</td><td class="px-4 py-2 text-xs text-center italic text-slate-400">${r.currency}</td><td class="px-4 py-2 text-right text-xs text-green-600 font-medium">${new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(r.income)}</td><td class="px-4 py-2 text-right text-xs text-red-600 font-medium">${new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(r.expense)}</td><td class="px-4 py-2 text-right text-xs ${netClass}">${new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(r.net)}</td>`; fragment.appendChild(tr);
+            }); tbody.appendChild(fragment);
         }
-
         function renderProfitChart(data) {
-            const ctx = document.getElementById('profitChart').getContext('2d');
-            if (profitChartInstance) profitChartInstance.destroy();
-            // Chart için de çok fazla veri olmasın, max 50 gösterelim görsel bozulmasın diye
-            const chartData = data.slice(0, 50); 
-            profitChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: chartData.map(d => d.file),
-                    datasets: [{
-                        label: 'Net Kar/Zarar',
-                        data: chartData.map(d => d.net),
-                        backgroundColor: chartData.map(d => d.net >= 0 ? '#10b981' : '#ef4444'),
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: (ctx) => `Net: ${new Intl.NumberFormat('tr-TR').format(ctx.raw)}` } } },
-                    scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#f1f5f9' } } }
-                }
-            });
+            const ctx = document.getElementById('profitChart').getContext('2d'); if (profitChartInstance) profitChartInstance.destroy(); const topData = data.slice(0, 50); 
+            profitChartInstance = new Chart(ctx, { type: 'bar', data: { labels: topData.map(d => d.file), datasets: [{ label: 'Net Kar/Zarar', data: topData.map(d => d.net), backgroundColor: topData.map(d => d.net >= 0 ? '#10b981' : '#ef4444'), borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { afterLabel: (ctx) => `Net: ${new Intl.NumberFormat('tr-TR').format(ctx.raw)}` } } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } }, y: { grid: { color: '#f1f5f9' } } } } });
         }
-
         function renderProfitSummary(data) {
-            const container = document.getElementById('profitTotalContainer'); container.innerHTML = "";
-            const totals = {};
+            const container = document.getElementById('profitTotalContainer'); container.innerHTML = ""; const totals = {};
             data.forEach(r => { const c = r.currency || "TRY"; if(!totals[c]) totals[c]=0; totals[c]+=r.net; });
-            Object.keys(totals).forEach(curr => {
-                const val = totals[curr]; const color = val >= 0 ? "text-green-400" : "text-red-400";
-                container.innerHTML += `<div class="flex justify-between items-center text-sm font-medium border-b border-slate-700 pb-1 last:border-0 mb-1"><span>${curr}</span><span class="${color}">${new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(val)}</span></div>`;
-            });
+            Object.keys(totals).forEach(curr => { const val = totals[curr]; const color = val >= 0 ? "text-green-400" : "text-red-400"; container.innerHTML += `<div class="flex justify-between items-center text-sm font-medium border-b border-slate-700 pb-1 last:border-0 mb-1"><span>${curr}</span><span class="${color}">${new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(val)}</span></div>`; });
         }
-
-        function downloadProfitExcel() {
-            if (!profitResults.length) return;
-            const ws = XLSX.utils.json_to_sheet(profitResults.map(r => ({ "Dosya": r.file, "Müşteri": r.customer, "Taşıyıcı": r.carrier, "PB": r.currency, "Gelir": r.income, "Gider": r.expense, "Net": r.net })));
-            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Kar Zarar");
-            XLSX.writeFile(wb, `KarZarar_${new Date().toLocaleDateString('tr-TR')}.xlsx`);
-        }
-
+        function downloadProfitExcel() { if (!profitResults.length) return; const ws = XLSX.utils.json_to_sheet(profitResults.map(r => ({ "Dosya": r.file, "Müşteri": r.customer, "Taşıyıcı": r.carrier, "PB": r.currency, "Gelir": r.income, "Gider": r.expense, "Net": r.net }))); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Kar Zarar"); XLSX.writeFile(wb, `KarZarar_${new Date().toLocaleDateString('tr-TR')}.xlsx`); }
         async function downloadProfitPDF() {
-            if (!profitResults.length) return;
-            const { jsPDF } = window.jspdf; const doc = new jsPDF();
-            doc.setFont("helvetica", "bold"); doc.text("Kar/Zarar Raporu", 14, 20);
-            
-            const canvas = document.getElementById('profitChart');
-            if(canvas) doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 30, 180, 70);
-
+            if (!profitResults.length) return; const { jsPDF } = window.jspdf; const doc = new jsPDF(); doc.setFont("helvetica", "bold"); doc.text("Kar/Zarar Raporu", 14, 20); const canvas = document.getElementById('profitChart'); if(canvas) doc.addImage(canvas.toDataURL('image/png'), 'PNG', 15, 30, 180, 70);
             const body = profitResults.map(r => [r.file, r.customer, r.carrier, r.currency, new Intl.NumberFormat('tr-TR').format(r.income), new Intl.NumberFormat('tr-TR').format(r.expense), new Intl.NumberFormat('tr-TR').format(r.net)]);
-            doc.autoTable({
-                startY: 110, head: [['Dosya', 'Musteri', 'Tasiyici', 'PB', 'Gelir', 'Gider', 'Net']],
-                body: body, styles: { fontSize: 8 },
-                didParseCell: (data) => { if (data.section === 'body' && data.column.index === 6) { const v = parseFloat(data.cell.raw.replace(/\./g, '').replace(',', '.')); data.cell.styles.textColor = v < 0 ? [220, 38, 38] : [22, 163, 74]; } }
-            });
-            doc.save(`KarZarar_${new Date().toLocaleDateString('tr-TR')}.pdf`);
+            doc.autoTable({ startY: 110, head: [['Dosya', 'Musteri', 'Tasiyici', 'PB', 'Gelir', 'Gider', 'Net']], body: body, styles: { fontSize: 8 }, didParseCell: (data) => { if (data.section === 'body' && data.column.index === 6) { const v = parseFloat(data.cell.raw.replace(/\./g, '').replace(',', '.')); data.cell.styles.textColor = v < 0 ? [220, 38, 38] : [22, 163, 74]; } } }); doc.save(`KarZarar_${new Date().toLocaleDateString('tr-TR')}.pdf`);
         }
 
         // --- YARDIMCI FONKSİYONLAR ---
         function parseMoney(val) { if (typeof val === 'number') return val; if (!val) return 0; return parseFloat(String(val).replace(/\./g, '').replace(',', '.')); }
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('active', 'text-indigo-600'); el.classList.add('text-slate-500'); });
-            document.getElementById(tabId).classList.add('active');
-            const btn = document.getElementById('btn-' + tabId); btn.classList.add('active', 'text-indigo-600'); btn.classList.remove('text-slate-500');
-            if(tabId === 'dashboardTab') updateDashboard();
-        }
+        function switchTab(tabId) { document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active')); document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('active', 'text-indigo-600'); el.classList.add('text-slate-500'); }); document.getElementById(tabId).classList.add('active'); const btn = document.getElementById('btn-' + tabId); btn.classList.add('active', 'text-indigo-600'); btn.classList.remove('text-slate-500'); if(tabId === 'dashboardTab') updateDashboard(); }
         function setChartType(type) { chartType = type; document.querySelectorAll('.chart-type-btn').forEach(btn => btn.classList.remove('active', 'border-indigo-500', 'bg-indigo-50')); document.querySelector(`.chart-type-btn[data-type="${type}"]`).classList.add('active', 'border-indigo-500', 'bg-indigo-50'); updateDashboard(); }
         function resetToHome() { location.reload(); }
-        function showToast(msg, type="info") {
-            const t = document.getElementById('toast'); document.getElementById('toastMsg').textContent = msg;
-            t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[100] text-sm transform ${type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
-            document.getElementById('toastIcon').setAttribute('data-lucide', type === 'error' ? 'alert-circle' : 'check-circle'); lucide.createIcons();
-            t.style.opacity = "1"; t.style.transform = "translate(-50%, 0)"; setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translate(-50%, 20px)"; }, 3000);
-        }
+        function showToast(msg, type="info") { const t = document.getElementById('toast'); document.getElementById('toastMsg').textContent = msg; t.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[100] text-sm transform ${type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`; document.getElementById('toastIcon').setAttribute('data-lucide', type === 'error' ? 'alert-circle' : 'check-circle'); lucide.createIcons(); t.style.opacity = "1"; t.style.transform = "translate(-50%, 0)"; setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translate(-50%, 20px)"; }, 3000); }
         function debounce(func, wait) { let timeout; return function(...args) { clearTimeout(timeout); timeout = setTimeout(() => func.apply(this, args), wait); }; }
         
         // Diğer Butonlar
         document.getElementById('resetFiltersBtn').addEventListener('click', () => { Object.keys(columnFilters).forEach(k => columnFilters[k] = ""); globalSearch.value = ""; currentPage = 1; applyTableFilters(); });
         document.getElementById('downloadExcelBtn').addEventListener('click', () => { if(!filteredData.length) return; const ws = XLSX.utils.json_to_sheet(filteredData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Veriler"); XLSX.writeFile(wb, "DataViz_Export.xlsx"); });
-        async function downloadChartPDF() { const c = document.getElementById('mainChart'); if(!c) return; const { jsPDF } = window.jspdf; const doc = new jsPDF('l','mm','a4'); doc.addImage(c.toDataURL('image/png'), 'PNG', 15, 20, 260, 120); doc.save('Grafik.pdf'); }
+        async function downloadChartPDF() {
+            const c = document.getElementById('mainChart'); if(!c) return;
+            const { jsPDF } = window.jspdf; const doc = new jsPDF('l','mm','a4'); 
+            const dateStr = new Date().toLocaleDateString('tr-TR');
+            doc.setFontSize(16); doc.text("Grafik Raporu", 15, 15); doc.setFontSize(10); doc.text(dateStr, 280, 15, { align: 'right' });
+            doc.addImage(c.toDataURL('image/png'), 'PNG', 15, 25, 267, 120);
+            
+            // Add Summary Table to PDF
+            if(dashboardSummaryData.length > 0) {
+                const body = dashboardSummaryData.map(r => [r.label, r.group, new Intl.NumberFormat('tr-TR').format(r.value)]);
+                doc.autoTable({
+                    startY: 150, head: [['Etiket', 'Grup', 'Değer']], body: body, theme: 'grid', styles: { fontSize: 8 }, columnStyles: { 2: { halign: 'right' } }
+                });
+            }
+            doc.save(`Grafik_Raporu_${dateStr}.pdf`);
+        }
         
         // Pagination & Search Listeners
         globalSearch.addEventListener('input', debounce(() => { currentPage = 1; applyTableFilters(); }, 300));
@@ -822,7 +726,6 @@
         function syncScroll() { if(ms.scrollWidth > ms.clientWidth) { document.getElementById('topScrollWidthDiv').style.width = ms.scrollWidth + 'px'; ts.classList.remove('hidden'); } else ts.classList.add('hidden'); }
         ts.addEventListener('scroll', () => { ms.scrollLeft = ts.scrollLeft; }); ms.addEventListener('scroll', () => { ts.scrollLeft = ms.scrollLeft; }); window.addEventListener('resize', syncScroll);
 
-        // --- YENİ: updatePagination Fonksiyonu (Eksikliği Giderildi) ---
         function updatePagination() {
             const maxPage = Math.ceil(filteredData.length / rowsPerPage) || 1;
             document.getElementById('pageInfoDisplay').textContent = `${currentPage} / ${maxPage}`;
