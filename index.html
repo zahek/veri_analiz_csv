@@ -34,8 +34,12 @@
         
         /* Sürükle Bırak Stilleri */
         .drop-zone--over { border-color: #4f46e5; background-color: #eef2ff; }
+        
+        /* Tablo Header Sürükleme */
         th[draggable="true"] { cursor: grab; }
-        .dragging { opacity: 0.5; background-color: #f1f5f9 !important; }
+        th[draggable="true"]:active { cursor: grabbing; }
+        .th-dragging { opacity: 0.4; background-color: #e0e7ff !important; border: 2px dashed #4f46e5 !important; }
+        .th-drag-over { background-color: #eef2ff !important; border-left: 3px solid #4f46e5 !important; }
         
         /* Tablo Stilleri */
         .column-filter-select {
@@ -43,10 +47,6 @@
             background-repeat: no-repeat; background-position: right 0.4rem center; background-size: 0.8rem;
         }
         thead th { position: sticky; top: 0; z-index: 10; }
-        
-        /* Loading Spinner */
-        .loader { border-top-color: #4f46e5; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
-        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-slate-800 pb-12">
@@ -57,7 +57,7 @@
             <div class="bg-indigo-600 p-1.5 rounded-lg text-white">
                 <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
             </div>
-            <h1 class="text-xl font-bold text-slate-800 tracking-tight">Data<span class="text-indigo-600">Viz</span></h1>
+            <h1 class="text-xl font-bold text-slate-800 tracking-tight">Veri <span class="text-indigo-600">Analiz Aracı</span></h1>
         </div>
         
         <div class="flex items-center gap-4">
@@ -67,7 +67,7 @@
             <div class="h-6 w-px bg-gray-200"></div>
             <div class="text-xs text-right hidden sm:block">
                 <p class="font-semibold text-slate-700">EMMC Danışmanlık</p>
-                <p class="text-slate-400">Analiz Aracı v2.1</p>
+                <p class="text-slate-400">Analiz Aracı v2.4</p>
             </div>
         </div>
     </nav>
@@ -162,7 +162,7 @@
                 </div>
             </div>
 
-            <!-- TAB 2: GENEL DASHBOARD (Mevcut Grafik Stüdyosu) -->
+            <!-- TAB 2: GENEL DASHBOARD -->
             <div id="dashboardTab" class="tab-content">
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-fit sticky top-20">
@@ -202,30 +202,25 @@
                 </div>
             </div>
 
-            <!-- TAB 3: KAR/ZARAR ANALİZİ (YENİ) -->
+            <!-- TAB 3: KAR/ZARAR ANALİZİ -->
             <div id="profitTab" class="tab-content">
                 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                    <!-- Ayarlar Paneli -->
                     <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-fit sticky top-20">
                         <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
                             <i data-lucide="settings-2" class="w-4 h-4 text-indigo-600"></i> Analiz Ayarları
                         </h3>
                         <div class="space-y-4">
-                            <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Dosya No Sütunu</label><select id="profitFileCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2"></select></div>
+                            <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Gruplama (Ref / Dosya)</label><select id="profitFileCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2"></select></div>
                             <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Gelir Sütunu (+)</label><select id="profitIncomeCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-green-500 focus:ring-green-500 bg-green-50 border p-2"></select></div>
                             <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Gider Sütunu (-)</label><select id="profitExpenseCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-red-500 focus:ring-red-500 bg-red-50 border p-2"></select></div>
-                            
                             <div class="h-px bg-gray-100"></div>
-                            
                             <div><label class="block text-[10px] text-slate-400 mb-1">Müşteri (Opsiyonel)</label><select id="profitCustomerCol" class="w-full text-xs border-gray-300 rounded shadow-sm bg-gray-50 border p-1.5"></select></div>
                             <div><label class="block text-[10px] text-slate-400 mb-1">Taşıyıcı (Opsiyonel)</label><select id="profitCarrierCol" class="w-full text-xs border-gray-300 rounded shadow-sm bg-gray-50 border p-1.5"></select></div>
                             <div><label class="block text-[10px] text-slate-400 mb-1">Para Birimi (Opsiyonel)</label><select id="profitCurrencyCol" class="w-full text-xs border-gray-300 rounded shadow-sm bg-gray-50 border p-1.5"></select></div>
-                            
                             <button onclick="runProfitAnalysis()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 mt-2">
                                 <i data-lucide="play" class="w-4 h-4"></i> Analizi Çalıştır
                             </button>
                         </div>
-                        
                         <div id="profitSummaryCard" class="mt-6 hidden animate-in fade-in slide-in-from-bottom-2">
                             <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-xl p-4 text-white shadow-lg">
                                 <p class="text-[10px] text-slate-400 uppercase font-bold mb-2">Toplam Net Kar</p>
@@ -233,10 +228,7 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Sonuçlar Paneli -->
                     <div class="lg:col-span-3 space-y-6">
-                        <!-- Üst Bar -->
                         <div class="flex justify-between items-center bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
                             <h3 class="font-bold text-slate-700 flex items-center gap-2"><i data-lucide="list" class="w-4 h-4"></i> Analiz Sonuçları</h3>
                             <div class="flex gap-2">
@@ -248,19 +240,13 @@
                                 </button>
                             </div>
                         </div>
-
-                        <!-- Grafik -->
-                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-72 relative">
-                            <canvas id="profitChart"></canvas>
-                        </div>
-
-                        <!-- Tablo -->
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm h-72 relative"><canvas id="profitChart"></canvas></div>
                         <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <div class="overflow-x-auto max-h-[500px] custom-scrollbar">
                                 <table class="w-full text-sm text-left">
                                     <thead class="bg-gray-50 text-xs text-slate-500 uppercase sticky top-0 shadow-sm z-10">
                                         <tr>
-                                            <th class="px-4 py-3 font-bold">Dosya No</th>
+                                            <th class="px-4 py-3 font-bold">Referans</th>
                                             <th class="px-4 py-3 font-bold">Müşteri</th>
                                             <th class="px-4 py-3 font-bold">Taşıyıcı</th>
                                             <th class="px-4 py-3 font-bold text-center">PB</th>
@@ -295,15 +281,15 @@
         let filteredData = [];
         let columns = [];
         let chartInstance = null;
-        let profitChartInstance = null; // Profit sekmesi grafiği
+        let profitChartInstance = null;
         let chartType = 'bar';
         
         let currentPage = 1;
         let rowsPerPage = 25;
         let sortConfig = { key: null, direction: 'asc' };
         let columnFilters = {};
+        let draggedColumn = null;
         
-        // Profit Data Cache
         let profitResults = [];
 
         // DOM ELEMENTS
@@ -337,50 +323,160 @@
         }
 
         function processData(data) {
-            rawData = data.map(row => {
-                const newRow = {};
-                Object.keys(row).forEach(key => {
-                    let val = row[key];
-                    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
-                        try { const d = new Date(val); if(!isNaN(d)) val = d.toLocaleDateString('tr-TR'); } catch(e){}
-                    }
-                    if (typeof val === 'number') newRow[key] = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(val);
-                    else if (typeof val === 'string' && /^-?[\d,]+\.\d+$/.test(val)) {
-                         const num = parseFloat(val.replace(/,/g, ''));
-                         if(!isNaN(num)) newRow[key] = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(num);
-                         else newRow[key] = val;
-                    } else newRow[key] = val;
+            try {
+                if(data.length > 0) {
+                    columns = Object.keys(data[0]).filter(k => k && k.trim() !== "");
+                } else {
+                    showToast("Veri okunamadı.", "error");
+                    return;
+                }
+
+                const validData = data.filter(row => Object.values(row).some(val => val !== null && val !== "" && val !== undefined));
+
+                rawData = validData.map(row => {
+                    const newRow = {};
+                    columns.forEach(key => {
+                        let val = row[key];
+                        if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+                            try { const d = new Date(val); if(!isNaN(d)) val = d.toLocaleDateString('tr-TR'); } catch(e){}
+                        }
+                        if (typeof val === 'number') newRow[key] = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(val);
+                        else if (typeof val === 'string' && /^-?[\d,]+\.\d+$/.test(val)) {
+                             const num = parseFloat(val.replace(/,/g, ''));
+                             if(!isNaN(num)) newRow[key] = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(num);
+                             else newRow[key] = val;
+                        } else newRow[key] = val;
+                    });
+                    return newRow;
                 });
-                return newRow;
-            });
-            columns = Object.keys(rawData[0]);
-            columns.forEach(col => columnFilters[col] = "");
-            filteredData = [...rawData];
-            uploadScreen.classList.add('hidden');
-            workspaceScreen.classList.remove('hidden');
-            initTable();
-            initDashboardOptions();
-            initProfitOptions(); // YENİ: Profit sekmesi ayarlarını doldur
-            showToast(`${rawData.length} satır yüklendi.`, "success");
+
+                columns.forEach(col => columnFilters[col] = "");
+                filteredData = [...rawData];
+                
+                uploadScreen.classList.add('hidden');
+                workspaceScreen.classList.remove('hidden');
+                
+                initTable();
+                initDashboardOptions();
+                initProfitOptions(); 
+                
+                showToast(`${rawData.length} satır yüklendi.`, "success");
+            } catch (err) {
+                console.error(err);
+                showToast("Veri işlenirken hata oluştu.", "error");
+            }
         }
 
         // --- TABLO ---
         function initTable() { renderTableHeader(); applyTableFilters(); }
+        
         function renderTableHeader() {
-            const thead = document.getElementById('tableHeader'); thead.innerHTML = ""; const tr = document.createElement('tr');
+            const thead = document.getElementById('tableHeader'); 
+            thead.innerHTML = ""; 
+            const tr = document.createElement('tr');
+            
             columns.forEach(col => {
                 const th = document.createElement('th');
-                th.className = "px-4 py-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors group";
-                th.innerHTML = `<div class="flex items-center justify-between gap-2"><span class="truncate font-bold text-slate-700">${col}</span><div class="flex flex-col opacity-30 group-hover:opacity-100"><i data-lucide="chevron-up" class="w-2 h-2 -mb-0.5"></i><i data-lucide="chevron-down" class="w-2 h-2"></i></div></div><div class="mt-2" onclick="event.stopPropagation()"><select class="w-full text-[10px] p-1 border border-gray-200 rounded bg-white focus:ring-1 focus:ring-indigo-500 column-filter" data-col="${col}"><option value="">Tümü</option></select></div>`;
-                th.addEventListener('click', () => handleSort(col));
+                th.setAttribute('draggable', true); 
+                th.setAttribute('data-col', col);
+                
+                th.className = "px-4 py-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors group select-none relative";
+                
+                // Sorting
+                th.addEventListener('click', (e) => {
+                    // Prevent sort if selecting options or clicking dropdown
+                    if (e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION') {
+                        handleSort(col);
+                    }
+                });
+
+                // Drag & Drop Handlers
+                th.addEventListener('dragstart', handleDragStart);
+                th.addEventListener('dragover', handleDragOver);
+                th.addEventListener('dragleave', handleDragLeave);
+                th.addEventListener('drop', handleDrop);
+                th.addEventListener('dragend', handleDragEnd);
+
+                th.innerHTML = `
+                    <div class="flex items-center justify-between gap-2 pointer-events-none">
+                        <span class="truncate font-bold text-slate-700">${col}</span>
+                        <div class="flex flex-col opacity-30 group-hover:opacity-100">
+                            <i data-lucide="chevron-up" class="w-2 h-2 -mb-0.5"></i>
+                            <i data-lucide="chevron-down" class="w-2 h-2"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2" onmousedown="event.stopPropagation()">
+                        <select class="w-full text-[10px] p-1 border border-gray-200 rounded bg-white focus:ring-1 focus:ring-indigo-500 column-filter" data-col="${col}">
+                            <option value="">Tümü</option>
+                        </select>
+                    </div>
+                `;
+                
+                // Populate Filters
                 const uniqueVals = [...new Set(rawData.map(r => r[col]))].filter(Boolean).sort();
                 const select = th.querySelector('select');
-                uniqueVals.slice(0, 100).forEach(v => { const opt = document.createElement('option'); opt.value = v; opt.textContent = v; select.appendChild(opt); });
-                select.addEventListener('change', (e) => { columnFilters[col] = e.target.value; currentPage = 1; applyTableFilters(); });
+                uniqueVals.slice(0, 100).forEach(v => { 
+                    const opt = document.createElement('option'); 
+                    opt.value = v; 
+                    opt.textContent = v; 
+                    if(columnFilters[col] === String(v)) opt.selected = true;
+                    select.appendChild(opt); 
+                });
+                
+                select.addEventListener('change', (e) => { 
+                    columnFilters[col] = e.target.value; 
+                    currentPage = 1; 
+                    applyTableFilters(); 
+                });
+                
                 tr.appendChild(th);
             });
-            thead.appendChild(tr); lucide.createIcons();
+            thead.appendChild(tr); 
+            lucide.createIcons();
         }
+
+        // Drag Handler Functions
+        function handleDragStart(e) {
+            draggedColumn = this.getAttribute('data-col');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', draggedColumn);
+            this.classList.add('th-dragging');
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault(); 
+            e.dataTransfer.dropEffect = 'move';
+            this.classList.add('th-drag-over');
+            return false;
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('th-drag-over');
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+            this.classList.remove('th-drag-over');
+            
+            const targetColumn = this.getAttribute('data-col');
+            
+            if (draggedColumn && targetColumn && draggedColumn !== targetColumn) {
+                const fromIdx = columns.indexOf(draggedColumn);
+                const toIdx = columns.indexOf(targetColumn);
+                
+                columns.splice(toIdx, 0, columns.splice(fromIdx, 1)[0]);
+                
+                renderTableHeader();
+                renderTableBody();
+            }
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.classList.remove('th-dragging');
+            document.querySelectorAll('th').forEach(th => th.classList.remove('th-drag-over'));
+        }
+
         function applyTableFilters() {
             const term = globalSearch.value.toLowerCase();
             filteredData = rawData.filter(row => {
@@ -498,35 +594,40 @@
             labels.forEach((l, i) => datasets.forEach(d => { if(d.data[i]){ b.innerHTML += `<tr class="border-b border-gray-50 hover:bg-gray-50"><td class="px-6 py-2 text-xs font-medium text-slate-700">${l}</td><td class="px-6 py-2 text-xs"><span class="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-semibold text-[10px]">${d.label}</span></td><td class="px-6 py-2 text-right font-bold text-slate-700 text-xs">${new Intl.NumberFormat('tr-TR').format(d.data[i])}</td></tr>`; } }));
         }
 
-        // --- YENİ: PROFIT/LOSS TAB LOGIC ---
+        // --- PROFIT/LOSS LOGIC ---
         function initProfitOptions() {
             const selects = ['profitFileCol', 'profitIncomeCol', 'profitExpenseCol', 'profitCustomerCol', 'profitCarrierCol', 'profitCurrencyCol'];
             selects.forEach(id => {
-                const el = document.getElementById(id); el.innerHTML = '<option value="">Seçiniz...</option>';
+                const el = document.getElementById(id); 
+                el.innerHTML = '<option value="">Seçiniz...</option>';
                 columns.forEach(col => { const opt = document.createElement('option'); opt.value = col; opt.textContent = col; el.appendChild(opt); });
+                // Remove existing listeners if any
+                const newEl = el.cloneNode(true);
+                el.parentNode.replaceChild(newEl, el);
+                newEl.addEventListener('change', runProfitAnalysis);
             });
             autoSelectProfitOptions();
         }
         
         function autoSelectProfitOptions() {
             const find = (keywords) => columns.find(c => keywords.some(k => c.toLowerCase().includes(k)));
-            // Öncelik sıralaması
             const setVal = (id, keywords) => { const col = find(keywords); if(col) document.getElementById(id).value = col; return col; };
             
-            // LOJ / Dosya No en kritiği. "LOJ" kelimesi varsa onu al, yoksa "dosya"
+            // LOJ kelimesine öncelik ver
             let fileCol = columns.find(c => c.toUpperCase().includes("LOJ"));
-            if(!fileCol) fileCol = find(['dosya', 'file', 'ref', 'fiş']);
+            if(!fileCol) fileCol = find(['dosya', 'file', 'ref', 'fiş', 'no']);
             if(fileCol) document.getElementById('profitFileCol').value = fileCol;
 
-            if(setVal('profitIncomeCol', ['gelir', 'satış', 'alacak', 'income', 'revenue', 'tutar']) && fileCol) {
-                // Eğer ana kolonlar bulunduysa otomatik çalıştır
-                // runProfitAnalysis(); // Otomatik çalıştırma opsiyonel, kullanıcı butona bassın daha iyi.
-                showToast("Kar/Zarar sütunları otomatik eşleşti.", "success");
-            }
+            const incCol = setVal('profitIncomeCol', ['gelir', 'satış', 'alacak', 'income', 'revenue', 'tutar']);
             setVal('profitExpenseCol', ['gider', 'maliyet', 'borç', 'alış', 'expense', 'cost']);
             setVal('profitCustomerCol', ['müşteri', 'customer', 'alıcı', 'cari']);
             setVal('profitCarrierCol', ['taşıyıcı', 'carrier', 'nakliye', 'plaka']);
             setVal('profitCurrencyCol', ['döviz', 'para', 'birim', 'curr']);
+
+            if (fileCol && incCol) {
+                runProfitAnalysis();
+                showToast("Analiz otomatik başlatıldı.", "success");
+            }
         }
 
         function runProfitAnalysis() {
@@ -537,15 +638,15 @@
             const carrCol = document.getElementById('profitCarrierCol').value;
             const currCol = document.getElementById('profitCurrencyCol').value;
 
-            if (!fileCol || !incomeCol) { showToast("Lütfen en az Dosya No ve Gelir sütunlarını seçin.", "error"); return; }
+            if (!fileCol || !incomeCol) return;
 
             const analysisData = {}; 
-            // Burada rawData kullanıyoruz ki tablo filtresinden bağımsız tüm dosya içeriğini analiz etsin
-            // Kullanıcı tüm dosyanın kar/zararını görmek ister genelde.
+            // rawData üzerinden gidiyoruz
             rawData.forEach(row => {
-                const fileVal = String(row[fileCol] || "");
-                // LOJ ile başlayanları filtrele (Case insensitive)
-                if (fileVal.toUpperCase().startsWith("LOJ")) {
+                const fileVal = String(row[fileCol] || "").trim();
+                
+                // BOŞ DEĞERLERİ ATLA, AMA "LOJ" ZORUNLULUĞUNU KALDIR
+                if (fileVal) { 
                     if (!analysisData[fileVal]) {
                          const curr = currCol ? (row[currCol] || "") : "";
                          analysisData[fileVal] = { income: 0, expense: 0, currency: curr, customer: "", carrier: "" };
@@ -564,29 +665,24 @@
             }).sort((a, b) => b.net - a.net);
 
             if (profitResults.length === 0) {
-                document.getElementById('profitTableBody').innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-400">"LOJ" ile başlayan kayıt bulunamadı.</td></tr>';
+                document.getElementById('profitTableBody').innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-400">Seçilen sütunlara göre veri bulunamadı.</td></tr>';
                 return;
             }
 
-            // Render Table
             renderProfitTable(profitResults);
-            // Render Chart
             renderProfitChart(profitResults);
-            // Render Summary
             renderProfitSummary(profitResults);
             
-            // Enable Buttons
             document.getElementById('btnProfitExcel').disabled = false;
             document.getElementById('btnProfitPDF').disabled = false;
-            
-            // Scroll to results
             document.getElementById('profitSummaryCard').classList.remove('hidden');
         }
 
         function renderProfitTable(data) {
             const tbody = document.getElementById('profitTableBody'); tbody.innerHTML = "";
             const fragment = document.createDocumentFragment();
-            data.forEach(r => {
+            // İlk 200 kaydı göster (performans için)
+            data.slice(0, 200).forEach(r => {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-gray-50 border-b border-gray-50 last:border-0";
                 const netClass = r.net >= 0 ? "text-blue-600 font-bold" : "text-red-600 font-bold";
                 tr.innerHTML = `
@@ -693,6 +789,14 @@
         const ts = document.getElementById('topScrollContainer'); const ms = document.getElementById('tableContainer');
         function syncScroll() { if(ms.scrollWidth > ms.clientWidth) { document.getElementById('topScrollWidthDiv').style.width = ms.scrollWidth + 'px'; ts.classList.remove('hidden'); } else ts.classList.add('hidden'); }
         ts.addEventListener('scroll', () => { ms.scrollLeft = ts.scrollLeft; }); ms.addEventListener('scroll', () => { ts.scrollLeft = ms.scrollLeft; }); window.addEventListener('resize', syncScroll);
+
+        // --- YENİ: updatePagination Fonksiyonu (Eksikliği Giderildi) ---
+        function updatePagination() {
+            const maxPage = Math.ceil(filteredData.length / rowsPerPage) || 1;
+            document.getElementById('pageInfoDisplay').textContent = `${currentPage} / ${maxPage}`;
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = currentPage === maxPage;
+        }
 
     </script>
 </body>
