@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV to Excel - Veri Analiz Platformu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- CSV ve Excel Kütüphaneleri -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- PDF Kütüphaneleri -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <!-- Grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- İkonlar -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Tab Transitions */
+        .tab-content { display: none; opacity: 0; transition: opacity 0.3s ease-in-out; }
+        .tab-content.active { display: block; opacity: 1; }
+        
+        .tab-btn.active { border-bottom: 2px solid #4f46e5; color: #4f46e5; font-weight: 600; }
+        
+        /* Sürükle Bırak Stilleri */
+        .drop-zone--over { border-color: #4f46e5; background-color: #eef2ff; }
+        th[draggable="true"] { cursor: grab; }
+        .dragging { opacity: 0.5; background-color: #f1f5f9 !important; }
+        
+        /* Tablo Stilleri */
+        .column-filter-select {
+            appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat; background-position: right 0.4rem center; background-size: 0.8rem;
+        }
+        thead th { position: sticky; top: 0; z-index: 10; }
+        
+        /* Loading Spinner */
+        .loader { border-top-color: #4f46e5; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen text-slate-800 pb-12">
+
+    <!-- HEADER -->
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-50 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="resetToHome()">
+            <div class="bg-indigo-600 p-1.5 rounded-lg text-white">
+                <i data-lucide="bar-chart-2" class="w-5 h-5"></i>
+            </div>
+            <h1 class="text-xl font-bold text-slate-800 tracking-tight">Data<span class="text-indigo-600">Viz</span></h1>
+        </div>
+        
+        <div class="flex items-center gap-4">
+            <button onclick="document.getElementById('csvFileInput').click()" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors flex items-center gap-2">
+                <i data-lucide="upload" class="w-4 h-4"></i> <span class="hidden sm:inline">Yeni Dosya</span>
+            </button>
+            <div class="h-6 w-px bg-gray-200"></div>
+            <div class="text-xs text-right hidden sm:block">
+                <p class="font-semibold text-slate-700">EMMC Danışmanlık</p>
+                <p class="text-slate-400">Analiz Aracı v2.0</p>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ANA İÇERİK -->
+    <div class="max-w-[98%] mx-auto py-6 px-2">
+        
+        <!-- Dosya Yükleme Ekranı (Başlangıç) -->
+        <div id="uploadScreen" class="flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in zoom-in duration-500">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-extrabold text-slate-900 mb-3">Verilerinizi Anlamlı Bilgiye Dönüştürün</h2>
+                <p class="text-slate-500 max-w-lg mx-auto">CSV dosyalarınızı yükleyin, anında filtreleyin, düzenleyin ve profesyonel grafiklerle analiz edin.</p>
+            </div>
+            
+            <div id="dropZone" class="w-full max-w-2xl bg-white border-2 border-dashed border-slate-300 rounded-2xl p-12 text-center hover:border-indigo-500 transition-all cursor-pointer shadow-sm hover:shadow-md group">
+                <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+                <div class="mb-4 inline-flex items-center justify-center w-16 h-16 bg-indigo-50 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform">
+                    <i data-lucide="file-up" class="w-8 h-8"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-slate-700 mb-1">CSV Dosyasını Sürükleyin</h3>
+                <p class="text-sm text-slate-400 mb-6">veya bilgisayarınızdan seçmek için tıklayın</p>
+                <button onclick="document.getElementById('csvFileInput').click()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-2.5 rounded-lg shadow-lg hover:shadow-xl transition-all flex items-center gap-2 mx-auto">
+                    Dosya Seç
+                </button>
+            </div>
+        </div>
+
+        <!-- Çalışma Alanı (Veri Yüklendikten Sonra) -->
+        <div id="workspaceScreen" class="hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+            
+            <!-- Sekmeler -->
+            <div class="bg-white border-b border-gray-200 px-4 rounded-t-xl shadow-sm mb-4 flex justify-between items-end">
+                <div class="flex space-x-6">
+                    <button onclick="switchTab('dataTab')" class="tab-btn active py-4 px-2 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-2" id="btn-dataTab">
+                        <i data-lucide="table" class="w-4 h-4"></i> Veri Listesi
+                    </button>
+                    <button onclick="switchTab('dashboardTab')" class="tab-btn py-4 px-2 text-sm font-medium text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-2" id="btn-dashboardTab">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Analiz Dashboard
+                    </button>
+                </div>
+                <div class="py-3 flex items-center gap-2">
+                    <span id="fileNameDisplay" class="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">dosya.csv</span>
+                    <span id="rowCountDisplay" class="text-[10px] text-slate-400">0 kayıt</span>
+                </div>
+            </div>
+
+            <!-- TAB 1: VERİ LİSTESİ -->
+            <div id="dataTab" class="tab-content active bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <!-- Araç Çubuğu -->
+                <div class="p-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                    <div class="relative w-full sm:w-72">
+                        <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+                        <input type="text" id="globalSearchInput" placeholder="Tabloda ara..." class="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button id="resetFiltersBtn" class="px-3 py-2 text-xs font-medium text-slate-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 shadow-sm">Filtreleri Temizle</button>
+                        <button id="downloadExcelBtn" class="flex-1 sm:flex-none px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase rounded-lg shadow-sm flex items-center justify-center gap-2 transition-colors">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Excel İndir
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tablo -->
+                <div class="relative">
+                    <div id="topScrollContainer" class="overflow-x-auto custom-scrollbar bg-gray-50 border-b border-gray-200" style="height: 12px;"><div id="topScrollWidthDiv" class="h-1"></div></div>
+                    <div id="tableContainer" class="overflow-x-auto custom-scrollbar min-h-[400px]">
+                        <table class="w-full text-left text-sm">
+                            <thead id="tableHeader" class="bg-gray-50 text-slate-500 uppercase tracking-wider text-[11px] font-semibold"></thead>
+                            <tbody id="tableBody" class="divide-y divide-gray-100 text-slate-600"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="p-4 border-t border-gray-200 bg-gray-50/50 flex justify-between items-center">
+                    <div class="flex items-center gap-2 text-xs text-slate-500">
+                        <span>Sayfa başına:</span>
+                        <select id="rowsPerPageSelect" class="bg-white border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center gap-1" id="paginationControls">
+                        <button id="prevPageBtn" class="p-1.5 rounded hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                        <span id="pageInfoDisplay" class="text-xs font-medium mx-2">1 / 1</span>
+                        <button id="nextPageBtn" class="p-1.5 rounded hover:bg-white border border-transparent hover:border-gray-200 disabled:opacity-30"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: ANALİZ DASHBOARD -->
+            <div id="dashboardTab" class="tab-content">
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    
+                    <!-- Sol Panel: Ayarlar -->
+                    <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-5 h-fit sticky top-20">
+                        <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                            <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i> Grafik Ayarları
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Grafik Tipi</label>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <button onclick="setChartType('bar')" class="chart-type-btn active p-2 rounded border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all flex justify-center" data-type="bar" title="Çubuk"><i data-lucide="bar-chart-2" class="w-5 h-5"></i></button>
+                                    <button onclick="setChartType('line')" class="chart-type-btn p-2 rounded border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all flex justify-center" data-type="line" title="Çizgi"><i data-lucide="activity" class="w-5 h-5"></i></button>
+                                    <button onclick="setChartType('pie')" class="chart-type-btn p-2 rounded border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all flex justify-center" data-type="pie" title="Pasta"><i data-lucide="pie-chart" class="w-5 h-5"></i></button>
+                                    <button onclick="setChartType('doughnut')" class="chart-type-btn p-2 rounded border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-all flex justify-center" data-type="doughnut" title="Halka"><i data-lucide="circle" class="w-5 h-5"></i></button>
+                                </div>
+                            </div>
+
+                            <div class="h-px bg-gray-100"></div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Eksenler</label>
+                                <div class="space-y-3">
+                                    <div>
+                                        <span class="text-[10px] text-slate-400 block mb-1">X Ekseni (Kategori)</span>
+                                        <select id="dashXAxis" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2"></select>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] text-slate-400 block mb-1">Y Ekseni (Değer)</span>
+                                        <select id="dashYAxis" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2"></select>
+                                    </div>
+                                    <div>
+                                        <span class="text-[10px] text-slate-400 block mb-1">Gruplama (Para Birimi vb.)</span>
+                                        <select id="dashGroup" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2">
+                                            <option value="">Yok (Gruplama Yapma)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="h-px bg-gray-100"></div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Hesaplama</label>
+                                <select id="dashAgg" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2">
+                                    <option value="sum">Toplam (Sum)</option>
+                                    <option value="avg">Ortalama (Average)</option>
+                                    <option value="count">Kayıt Sayısı (Count)</option>
+                                    <option value="min">En Düşük (Min)</option>
+                                    <option value="max">En Yüksek (Max)</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Limit (Top N)</label>
+                                <input type="number" id="dashLimit" value="15" min="5" max="100" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sağ Panel: Görselleştirme -->
+                    <div class="lg:col-span-3 space-y-6">
+                        
+                        <!-- KPI Kartları -->
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="kpiContainer">
+                            <!-- JS ile doldurulacak -->
+                            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm animate-pulse h-24"></div>
+                            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm animate-pulse h-24"></div>
+                            <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm animate-pulse h-24"></div>
+                        </div>
+
+                        <!-- Ana Grafik -->
+                        <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm relative group">
+                            <div class="flex justify-between items-center mb-6">
+                                <h3 class="font-bold text-slate-700" id="chartTitle">Analiz Grafiği</h3>
+                                <button onclick="downloadChartPDF()" class="text-xs bg-white border border-gray-300 hover:bg-gray-50 hover:text-red-600 text-slate-600 font-medium py-1.5 px-3 rounded-lg shadow-sm transition-all flex items-center gap-2">
+                                    <i data-lucide="file-down" class="w-3.5 h-3.5"></i> PDF İndir
+                                </button>
+                            </div>
+                            <div class="h-80 w-full relative" id="chartWrapper">
+                                <canvas id="mainChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Mini Veri Özeti -->
+                        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                                <h4 class="font-semibold text-sm text-slate-700">Grafik Verisi (Özet)</h4>
+                                <span class="text-[10px] text-slate-400 italic">Grafikte gösterilen veriler listelenmiştir.</span>
+                            </div>
+                            <div class="overflow-x-auto max-h-64 custom-scrollbar">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-white text-xs text-slate-500 uppercase sticky top-0 shadow-sm">
+                                        <tr>
+                                            <th class="px-6 py-3 font-medium">Etiket</th>
+                                            <th class="px-6 py-3 font-medium">Grup</th>
+                                            <th class="px-6 py-3 font-medium text-right">Değer</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="summaryTableBody" class="divide-y divide-gray-100 text-slate-600"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 opacity-0 pointer-events-none transition-all duration-300 z-[100] text-sm transform translate-y-4">
+        <i data-lucide="info" class="w-5 h-5" id="toastIcon"></i> <span id="toastMsg">Bildirim</span>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // GLOBAL DEĞİŞKENLER
+        let rawData = [];
+        let filteredData = [];
+        let columns = [];
+        let chartInstance = null;
+        let chartType = 'bar'; // Default
+        
+        // Tablo Değişkenleri
+        let currentPage = 1;
+        let rowsPerPage = 25;
+        let sortConfig = { key: null, direction: 'asc' };
+        let columnFilters = {};
+
+        // DOM ELEMENTS
+        const uploadScreen = document.getElementById('uploadScreen');
+        const workspaceScreen = document.getElementById('workspaceScreen');
+        const fileInput = document.getElementById('csvFileInput');
+        const globalSearch = document.getElementById('globalSearchInput');
+        
+        // --- BAŞLANGIÇ & DOSYA YÜKLEME ---
+        
+        // Sürükle Bırak Events
+        const dropZone = document.getElementById('dropZone');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('drop-zone--over'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drop-zone--over'));
+        dropZone.addEventListener('drop', (e) => {
+            dropZone.classList.remove('drop-zone--over');
+            const files = e.dataTransfer.files;
+            if(files.length) handleFile(files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function handleFile(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                showToast("Lütfen sadece CSV dosyası yükleyin.", "error");
+                return;
+            }
+
+            document.getElementById('fileNameDisplay').textContent = file.name;
+            
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                dynamicTyping: true,
+                complete: (results) => {
+                    if (results.data.length === 0) {
+                        showToast("Dosya boş görünüyor.", "error");
+                        return;
+                    }
+                    processData(results.data);
+                },
+                error: (err) => showToast("Okuma hatası: " + err.message, "error")
+            });
+        }
+
+        // --- VERİ İŞLEME & FORMATLAMA ---
+
+        function processData(data) {
+            // Veriyi temizle ve formatla (Tarih ve Sayı)
+            rawData = data.map(row => {
+                const newRow = {};
+                Object.keys(row).forEach(key => {
+                    let val = row[key];
+                    // Basit Tarih Formatlama (YYYY-MM-DD -> DD.MM.YYYY)
+                    if (typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+                        try {
+                            const d = new Date(val);
+                            if(!isNaN(d)) val = d.toLocaleDateString('tr-TR');
+                        } catch(e){}
+                    }
+                    // TR Sayı Formatı (3,100.50 -> 3.100,50)
+                    if (typeof val === 'number') {
+                        // Orijinal sayıyı sakla ama görüntüleme için formatla
+                        // Burada analiz için orijinal sayıları tutmak daha iyi, tablo render ederken formatlarız.
+                        // Ancak kullanıcı isteği "dönüştür" olduğu için stringe çevirip saklayalım, analizde geri çeviririz.
+                        newRow[key] = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(val);
+                        // Analiz kolaylığı için gizli ham değer tutabiliriz ama basitlik adına parseMoney kullanacağız.
+                    } else if (typeof val === 'string' && /^-?[\d,]+\.\d+$/.test(val)) {
+                         // "3,100.50" formatı
+                         const num = parseFloat(val.replace(/,/g, ''));
+                         if(!isNaN(num)) newRow[key] = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2 }).format(num);
+                         else newRow[key] = val;
+                    } else {
+                        newRow[key] = val;
+                    }
+                });
+                return newRow;
+            });
+
+            columns = Object.keys(rawData[0]);
+            columns.forEach(col => columnFilters[col] = "");
+            
+            filteredData = [...rawData];
+            
+            // UI Geçişi
+            uploadScreen.classList.add('hidden');
+            workspaceScreen.classList.remove('hidden');
+            
+            // Tabloyu Oluştur
+            initTable();
+            
+            // Dashboard Seçeneklerini Doldur
+            initDashboardOptions();
+            
+            showToast(`${rawData.length} satır başarıyla yüklendi.`, "success");
+        }
+
+        // --- TABLO YÖNETİMİ ---
+
+        function initTable() {
+            renderTableHeader();
+            applyTableFilters();
+        }
+
+        function renderTableHeader() {
+            const thead = document.getElementById('tableHeader');
+            thead.innerHTML = "";
+            const tr = document.createElement('tr');
+            
+            // Drag Drop logic için event listeners eklenebilir (Basitleştirildi)
+            columns.forEach(col => {
+                const th = document.createElement('th');
+                th.className = "px-4 py-3 bg-gray-50 border-b border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors group";
+                th.innerHTML = `
+                    <div class="flex items-center justify-between gap-2">
+                        <span class="truncate font-bold text-slate-700">${col}</span>
+                        <div class="flex flex-col opacity-30 group-hover:opacity-100">
+                            <i data-lucide="chevron-up" class="w-2 h-2 -mb-0.5"></i>
+                            <i data-lucide="chevron-down" class="w-2 h-2"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2" onclick="event.stopPropagation()">
+                        <select class="w-full text-[10px] p-1 border border-gray-200 rounded bg-white focus:ring-1 focus:ring-indigo-500 column-filter" data-col="${col}">
+                            <option value="">Tümü</option>
+                        </select>
+                    </div>
+                `;
+                
+                // Sorting
+                th.addEventListener('click', () => handleSort(col));
+                
+                // Filter Options Doldur
+                const uniqueVals = [...new Set(rawData.map(r => r[col]))].filter(Boolean).sort();
+                const select = th.querySelector('select');
+                uniqueVals.slice(0, 100).forEach(v => { // Performans için limit
+                    const opt = document.createElement('option');
+                    opt.value = v; opt.textContent = v;
+                    select.appendChild(opt);
+                });
+                
+                // Filter Change
+                select.addEventListener('change', (e) => {
+                    columnFilters[col] = e.target.value;
+                    currentPage = 1;
+                    applyTableFilters();
+                });
+
+                tr.appendChild(th);
+            });
+            thead.appendChild(tr);
+            lucide.createIcons();
+        }
+
+        function applyTableFilters() {
+            const term = globalSearch.value.toLowerCase();
+            
+            filteredData = rawData.filter(row => {
+                // Global Search
+                if (term) {
+                    if (!Object.values(row).some(val => String(val).toLowerCase().includes(term))) return false;
+                }
+                // Column Filters
+                for (const col of columns) {
+                    if (columnFilters[col] && String(row[col]) !== columnFilters[col]) return false;
+                }
+                return true;
+            });
+
+            document.getElementById('rowCountDisplay').textContent = `${filteredData.length} kayıt`;
+            renderTableBody();
+        }
+
+        function handleSort(key) {
+            if (sortConfig.key === key) {
+                sortConfig.direction = sortConfig.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortConfig.key = key;
+                sortConfig.direction = 'asc';
+            }
+            
+            filteredData.sort((a, b) => {
+                let valA = a[key] ? String(a[key]).toLowerCase() : "";
+                let valB = b[key] ? String(b[key]).toLowerCase() : "";
+                
+                // Sayısal sıralama (TR formatını parse et)
+                const numA = parseMoney(valA);
+                const numB = parseMoney(valB);
+                
+                if (!isNaN(numA) && !isNaN(numB) && valA.includes(',')) {
+                    return sortConfig.direction === 'asc' ? numA - numB : numB - numA;
+                }
+
+                if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+            renderTableBody();
+        }
+
+        function renderTableBody() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = "";
+            
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${columns.length}" class="p-8 text-center text-slate-400">Sonuç bulunamadı</td></tr>`;
+                updatePagination();
+                return;
+            }
+
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = filteredData.slice(start, end);
+
+            pageData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-indigo-50/30 transition-colors border-b border-gray-50 last:border-0";
+                columns.forEach(col => {
+                    const td = document.createElement('td');
+                    td.className = "px-4 py-2.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-[200px]";
+                    td.textContent = row[col] || "-";
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            
+            updatePagination();
+            syncScroll();
+        }
+
+        // --- DASHBOARD MANTIĞI ---
+
+        function initDashboardOptions() {
+            const selects = ['dashXAxis', 'dashYAxis', 'dashGroup'];
+            selects.forEach(id => {
+                const el = document.getElementById(id);
+                el.innerHTML = id === 'dashGroup' ? '<option value="">Yok (Gruplama Yapma)</option>' : '';
+                columns.forEach(col => {
+                    const opt = document.createElement('option');
+                    opt.value = col; opt.textContent = col;
+                    el.appendChild(opt);
+                });
+            });
+
+            // Akıllı Varsayılan Seçimler
+            autoSelectDashboardOptions();
+            
+            // Event Listeners - Değişiklik anında güncelle
+            ['dashXAxis', 'dashYAxis', 'dashGroup', 'dashAgg', 'dashLimit'].forEach(id => {
+                document.getElementById(id).addEventListener('change', updateDashboard);
+                document.getElementById(id).addEventListener('input', debounce(updateDashboard, 500));
+            });
+        }
+
+        function autoSelectDashboardOptions() {
+            // X Ekseni için metin bazlı (Müşteri, Taşıyıcı vb.)
+            const xKeywords = ['müşteri', 'cari', 'firma', 'taşıyıcı', 'plaka', 'ad', 'isim'];
+            const xCol = columns.find(c => xKeywords.some(k => c.toLowerCase().includes(k))) || columns[0];
+            document.getElementById('dashXAxis').value = xCol;
+
+            // Y Ekseni için sayısal (Gelir, Tutar, Borç)
+            const yKeywords = ['gelir', 'tutar', 'borç', 'alacak', 'fiyat', 'net', 'kar'];
+            const yCol = columns.find(c => yKeywords.some(k => c.toLowerCase().includes(k))) || columns[1];
+            document.getElementById('dashYAxis').value = yCol;
+
+            // Grup için Para Birimi
+            const gKeywords = ['döviz', 'para', 'birim', 'curr'];
+            const gCol = columns.find(c => gKeywords.some(k => c.toLowerCase().includes(k)));
+            if(gCol) document.getElementById('dashGroup').value = gCol;
+
+            // İlk render
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            const xCol = document.getElementById('dashXAxis').value;
+            const yCol = document.getElementById('dashYAxis').value;
+            const groupCol = document.getElementById('dashGroup').value;
+            const agg = document.getElementById('dashAgg').value;
+            const limit = parseInt(document.getElementById('dashLimit').value) || 15;
+
+            if (!xCol || !yCol) return;
+
+            // Başlığı Güncelle
+            document.getElementById('chartTitle').textContent = `${xCol} bazlı ${yCol} Analizi (${agg.toUpperCase()})`;
+
+            // Veriyi Grupla
+            const grouped = {};
+            // grouped yapısı: { "Label": { "USD": 100, "TRY": 500, "total": 600 } }
+
+            filteredData.forEach(row => {
+                const label = String(row[xCol] || "Diğer");
+                const group = groupCol ? String(row[groupCol] || "Genel") : "Genel";
+                
+                let val = 0;
+                if (agg !== 'count') {
+                    val = parseMoney(row[yCol]);
+                    if (isNaN(val)) val = 0;
+                } else {
+                    val = 1;
+                }
+
+                if (!grouped[label]) grouped[label] = { total: 0 };
+                if (!grouped[label][group]) grouped[label][group] = 0;
+
+                if (agg === 'min') {
+                    grouped[label][group] = Math.min(grouped[label][group] || Infinity, val);
+                    grouped[label].total = Math.min(grouped[label].total || Infinity, val);
+                } else if (agg === 'max') {
+                    grouped[label][group] = Math.max(grouped[label][group] || -Infinity, val);
+                    grouped[label].total = Math.max(grouped[label].total || -Infinity, val);
+                } else {
+                    // Sum, Count, Avg (önce sum alıyoruz, avg sonradan hesaplanacaksa logic değişmeli ama basit tutuyoruz)
+                    grouped[label][group] += val;
+                    grouped[label].total += val;
+                }
+            });
+
+            // Sıralama ve Kesme (Top N)
+            const sortedKeys = Object.keys(grouped).sort((a, b) => grouped[b].total - grouped[a].total).slice(0, limit);
+
+            // Chart.js Dataset Hazırlığı
+            const labels = sortedKeys;
+            const datasets = [];
+            
+            // Tüm benzersiz grupları bul (örn: USD, TRY, EUR)
+            const allGroups = new Set();
+            sortedKeys.forEach(k => Object.keys(grouped[k]).forEach(g => { if(g !== 'total') allGroups.add(g) }));
+            const groupsArr = Array.from(allGroups);
+
+            const colors = [
+                '#4f46e5', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'
+            ];
+
+            groupsArr.forEach((grp, idx) => {
+                const data = labels.map(l => grouped[l][grp] || 0);
+                datasets.push({
+                    label: grp,
+                    data: data,
+                    backgroundColor: chartType === 'line' ? 'transparent' : colors[idx % colors.length],
+                    borderColor: colors[idx % colors.length],
+                    borderWidth: 2,
+                    borderRadius: 4,
+                    tension: 0.3 // Çizgi grafiği için yumuşaklık
+                });
+            });
+
+            // Grafiği Çiz
+            renderChart(labels, datasets);
+            
+            // Özet Kartları ve Tabloyu Güncelle
+            updateKPICards(filteredData, yCol, groupCol);
+            updateSummaryTable(labels, datasets);
+        }
+
+        function renderChart(labels, datasets) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: chartType,
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } },
+                        tooltip: { 
+                            mode: 'index', 
+                            intersect: false,
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            titleColor: '#1e293b',
+                            bodyColor: '#475569',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 1,
+                            padding: 10
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9', borderDash: [2, 2] },
+                            ticks: { font: { size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 0 }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    }
+                }
+            });
+        }
+
+        function updateKPICards(data, valCol, groupCol) {
+            const container = document.getElementById('kpiContainer');
+            container.innerHTML = "";
+
+            // 1. Toplam Kayıt
+            createCard(container, "Toplam Kayıt", data.length, "file-text", "bg-blue-50 text-blue-600");
+
+            // 2. Toplam Değer (Seçili Y ekseni)
+            let totalVal = 0;
+            data.forEach(r => {
+                const val = parseMoney(r[valCol]);
+                if(!isNaN(val)) totalVal += val;
+            });
+            
+            // Eğer groupCol (Para birimi) varsa ve birden fazla ise tek toplam anlamsız olabilir ama yine de gösterelim
+            createCard(container, `Toplam ${valCol}`, new Intl.NumberFormat('tr-TR', { notation: "compact" }).format(totalVal), "trending-up", "bg-green-50 text-green-600");
+
+            // 3. Benzersiz Grup Sayısı
+            const uniqueGroups = new Set(data.map(r => r[groupCol] || "Genel")).size;
+            createCard(container, `Benzersiz ${groupCol || 'Grup'}`, uniqueGroups, "layers", "bg-purple-50 text-purple-600");
+        }
+
+        function createCard(container, title, value, icon, colorClass) {
+            const div = document.createElement('div');
+            div.className = "bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between";
+            div.innerHTML = `
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide">${title}</p>
+                    <p class="text-xl font-bold text-slate-800 mt-1">${value}</p>
+                </div>
+                <div class="p-3 rounded-lg ${colorClass}">
+                    <i data-lucide="${icon}" class="w-5 h-5"></i>
+                </div>
+            `;
+            container.appendChild(div);
+            lucide.createIcons();
+        }
+
+        function updateSummaryTable(labels, datasets) {
+            const tbody = document.getElementById('summaryTableBody');
+            tbody.innerHTML = "";
+            
+            labels.forEach((label, i) => {
+                datasets.forEach(ds => {
+                    const val = ds.data[i];
+                    if (val !== undefined && val !== 0) {
+                        const tr = document.createElement('tr');
+                        tr.className = "border-b border-gray-50 hover:bg-gray-50 transition-colors";
+                        tr.innerHTML = `
+                            <td class="px-6 py-2 font-medium text-slate-700 text-xs">${label}</td>
+                            <td class="px-6 py-2 text-xs"><span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-50 text-indigo-700">${ds.label}</span></td>
+                            <td class="px-6 py-2 text-right font-bold text-slate-700 text-xs">${new Intl.NumberFormat('tr-TR').format(val)}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    }
+                });
+            });
+        }
+
+        // --- YARDIMCI FONKSİYONLAR ---
+
+        function parseMoney(val) {
+            if (typeof val === 'number') return val;
+            if (!val) return 0;
+            // "3.100,50" -> 3100.50
+            return parseFloat(String(val).replace(/\./g, '').replace(',', '.'));
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('active');
+                el.classList.remove('text-indigo-600');
+                el.classList.add('text-slate-500');
+            });
+            
+            document.getElementById(tabId).classList.add('active');
+            const activeBtn = document.getElementById('btn-' + tabId);
+            activeBtn.classList.add('active');
+            activeBtn.classList.remove('text-slate-500');
+            activeBtn.classList.add('text-indigo-600');
+
+            if(tabId === 'dashboardTab') {
+                updateDashboard(); // Refresh graph size
+            }
+        }
+
+        function setChartType(type) {
+            chartType = type;
+            document.querySelectorAll('.chart-type-btn').forEach(btn => btn.classList.remove('active', 'border-indigo-500', 'bg-indigo-50'));
+            const btn = document.querySelector(`.chart-type-btn[data-type="${type}"]`);
+            if(btn) btn.classList.add('active', 'border-indigo-500', 'bg-indigo-50');
+            updateDashboard();
+        }
+
+        function resetToHome() {
+            location.reload(); // En temizi sayfayı yenilemektir
+        }
+
+        function showToast(msg, type="info") {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const text = document.getElementById('toastMsg');
+            
+            text.textContent = msg;
+            toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-300 z-[100] text-sm transform ${type === 'error' ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
+            
+            if(type === 'error') icon.setAttribute('data-lucide', 'alert-circle');
+            else if(type === 'success') icon.setAttribute('data-lucide', 'check-circle');
+            else icon.setAttribute('data-lucide', 'info');
+            
+            lucide.createIcons();
+            
+            toast.style.opacity = "1";
+            toast.style.transform = "translate(-50%, 0)";
+            
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                toast.style.transform = "translate(-50%, 20px)";
+            }, 3000);
+        }
+
+        // Global Search Debounce
+        globalSearch.addEventListener('input', debounce(() => {
+            currentPage = 1;
+            applyTableFilters();
+        }, 300));
+
+        // Pagination Events
+        document.getElementById('prevPageBtn').addEventListener('click', () => { if(currentPage > 1) { currentPage--; renderTableBody(); } });
+        document.getElementById('nextPageBtn').addEventListener('click', () => { const max = Math.ceil(filteredData.length / rowsPerPage); if(currentPage < max) { currentPage++; renderTableBody(); } });
+        document.getElementById('rowsPerPageSelect').addEventListener('change', (e) => { rowsPerPage = parseInt(e.target.value); currentPage = 1; renderTableBody(); });
+
+        function updatePagination() {
+            const maxPage = Math.ceil(filteredData.length / rowsPerPage) || 1;
+            document.getElementById('pageInfoDisplay').textContent = `${currentPage} / ${maxPage}`;
+            document.getElementById('prevPageBtn').disabled = currentPage === 1;
+            document.getElementById('nextPageBtn').disabled = currentPage === maxPage;
+        }
+
+        // Top Scroll Sync
+        const topScroll = document.getElementById('topScrollContainer');
+        const mainScroll = document.getElementById('tableContainer');
+        const topDiv = document.getElementById('topScrollWidthDiv');
+        
+        function syncScroll() {
+            if(mainScroll.scrollWidth > mainScroll.clientWidth) {
+                topDiv.style.width = mainScroll.scrollWidth + 'px';
+                topScroll.classList.remove('hidden');
+            } else {
+                topScroll.classList.add('hidden');
+            }
+        }
+        
+        topScroll.addEventListener('scroll', () => { mainScroll.scrollLeft = topScroll.scrollLeft; });
+        mainScroll.addEventListener('scroll', () => { topScroll.scrollLeft = mainScroll.scrollLeft; });
+        window.addEventListener('resize', syncScroll);
+
+        function debounce(func, wait) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), wait);
+            };
+        }
+
+        // PDF Indir
+        async function downloadChartPDF() {
+            const canvas = document.getElementById('mainChart');
+            if (!canvas) return;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('l', 'mm', 'a4');
+            const dateStr = new Date().toLocaleDateString('tr-TR');
+            
+            doc.setFontSize(16); doc.text("Analiz Raporu", 15, 15);
+            doc.setFontSize(10); doc.text(dateStr, 280, 15, { align: 'right' });
+            
+            const imgData = canvas.toDataURL('image/png');
+            doc.addImage(imgData, 'PNG', 15, 25, 267, 120);
+            
+            // Tabloyu ekle (Eğer veri varsa)
+            const rows = [];
+            document.querySelectorAll('#summaryTableBody tr').forEach(tr => {
+                const cols = Array.from(tr.querySelectorAll('td')).map(td => td.textContent);
+                rows.push(cols);
+            });
+            
+            if(rows.length > 0) {
+                doc.autoTable({
+                    startY: 150,
+                    head: [['Etiket', 'Grup', 'Değer']],
+                    body: rows,
+                    theme: 'grid',
+                    styles: { fontSize: 8 }
+                });
+            }
+            doc.save(`Analiz_Raporu_${dateStr}.pdf`);
+        }
+    </script>
+</body>
+</html>
