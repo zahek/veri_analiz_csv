@@ -47,6 +47,10 @@
             background-repeat: no-repeat; background-position: right 0.4rem center; background-size: 0.8rem;
         }
         thead th { position: sticky; top: 0; z-index: 10; }
+        
+        /* Loading Spinner */
+        .loader { border-top-color: #4f46e5; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen text-slate-800 pb-12">
@@ -67,7 +71,7 @@
             <div class="h-6 w-px bg-gray-200"></div>
             <div class="text-xs text-right hidden sm:block">
                 <p class="font-semibold text-slate-700">EMMC Danışmanlık</p>
-                <p class="text-slate-400">Analiz Aracı v2.4</p>
+                <p class="text-slate-400">Analiz Aracı v2.5</p>
             </div>
         </div>
     </nav>
@@ -213,10 +217,20 @@
                             <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Gruplama (Ref / Dosya)</label><select id="profitFileCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2"></select></div>
                             <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Gelir Sütunu (+)</label><select id="profitIncomeCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-green-500 focus:ring-green-500 bg-green-50 border p-2"></select></div>
                             <div><label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Gider Sütunu (-)</label><select id="profitExpenseCol" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-red-500 focus:ring-red-500 bg-red-50 border p-2"></select></div>
+                            
                             <div class="h-px bg-gray-100"></div>
+                            
                             <div><label class="block text-[10px] text-slate-400 mb-1">Müşteri (Opsiyonel)</label><select id="profitCustomerCol" class="w-full text-xs border-gray-300 rounded shadow-sm bg-gray-50 border p-1.5"></select></div>
                             <div><label class="block text-[10px] text-slate-400 mb-1">Taşıyıcı (Opsiyonel)</label><select id="profitCarrierCol" class="w-full text-xs border-gray-300 rounded shadow-sm bg-gray-50 border p-1.5"></select></div>
                             <div><label class="block text-[10px] text-slate-400 mb-1">Para Birimi (Opsiyonel)</label><select id="profitCurrencyCol" class="w-full text-xs border-gray-300 rounded shadow-sm bg-gray-50 border p-1.5"></select></div>
+                            
+                            <!-- YENİ: Limit Ayarı -->
+                            <div class="pt-2 border-t border-gray-100">
+                                <label class="block text-xs font-semibold text-slate-500 uppercase mb-1.5">Limit (Top N)</label>
+                                <input type="number" id="profitLimit" value="20" min="0" placeholder="0 = Hepsi" class="w-full text-sm border-gray-300 rounded-lg shadow-sm focus:border-indigo-500 focus:ring-indigo-500 bg-gray-50 border p-2">
+                                <p class="text-[10px] text-gray-400 mt-1 italic">0 veya boş bırakılırsa tümünü gösterir.</p>
+                            </div>
+
                             <button onclick="runProfitAnalysis()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg shadow-md transition-colors flex items-center justify-center gap-2 mt-2">
                                 <i data-lucide="play" class="w-4 h-4"></i> Analizi Çalıştır
                             </button>
@@ -606,6 +620,12 @@
                 el.parentNode.replaceChild(newEl, el);
                 newEl.addEventListener('change', runProfitAnalysis);
             });
+            // Limit değiştiğinde de çalışsın
+            const limitInput = document.getElementById('profitLimit');
+            const newLimitInput = limitInput.cloneNode(true);
+            limitInput.parentNode.replaceChild(newLimitInput, limitInput);
+            newLimitInput.addEventListener('input', debounce(runProfitAnalysis, 500));
+
             autoSelectProfitOptions();
         }
         
@@ -637,6 +657,9 @@
             const custCol = document.getElementById('profitCustomerCol').value;
             const carrCol = document.getElementById('profitCarrierCol').value;
             const currCol = document.getElementById('profitCurrencyCol').value;
+            // Yeni Limit Değeri
+            let limitVal = parseInt(document.getElementById('profitLimit').value);
+            const limit = (isNaN(limitVal) || limitVal < 0) ? 0 : limitVal;
 
             if (!fileCol || !incomeCol) return;
 
@@ -659,15 +682,22 @@
                 }
             });
 
-            profitResults = Object.keys(analysisData).map(key => {
+            let results = Object.keys(analysisData).map(key => {
                 const d = analysisData[key];
                 return { file: key, customer: d.customer || "-", carrier: d.carrier || "-", currency: d.currency || "-", income: d.income, expense: d.expense, net: d.income - d.expense };
             }).sort((a, b) => b.net - a.net);
 
-            if (profitResults.length === 0) {
+            if (results.length === 0) {
                 document.getElementById('profitTableBody').innerHTML = '<tr><td colspan="7" class="p-8 text-center text-red-400">Seçilen sütunlara göre veri bulunamadı.</td></tr>';
                 return;
             }
+
+            // Apply Limit
+            if (limit > 0) {
+                results = results.slice(0, limit);
+            }
+            
+            profitResults = results; // Update global var for export
 
             renderProfitTable(profitResults);
             renderProfitChart(profitResults);
@@ -681,7 +711,8 @@
         function renderProfitTable(data) {
             const tbody = document.getElementById('profitTableBody'); tbody.innerHTML = "";
             const fragment = document.createDocumentFragment();
-            // İlk 200 kaydı göster (performans için)
+            // İlk 200 kaydı göster (performans için table rendering limiti)
+            // Not: Export tüm datayı (limit dahilinde) alır.
             data.slice(0, 200).forEach(r => {
                 const tr = document.createElement('tr'); tr.className = "hover:bg-gray-50 border-b border-gray-50 last:border-0";
                 const netClass = r.net >= 0 ? "text-blue-600 font-bold" : "text-red-600 font-bold";
@@ -702,15 +733,16 @@
         function renderProfitChart(data) {
             const ctx = document.getElementById('profitChart').getContext('2d');
             if (profitChartInstance) profitChartInstance.destroy();
-            const topData = data.slice(0, 20); // Top 20
+            // Chart için de çok fazla veri olmasın, max 50 gösterelim görsel bozulmasın diye
+            const chartData = data.slice(0, 50); 
             profitChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: topData.map(d => d.file),
+                    labels: chartData.map(d => d.file),
                     datasets: [{
                         label: 'Net Kar/Zarar',
-                        data: topData.map(d => d.net),
-                        backgroundColor: topData.map(d => d.net >= 0 ? '#10b981' : '#ef4444'),
+                        data: chartData.map(d => d.net),
+                        backgroundColor: chartData.map(d => d.net >= 0 ? '#10b981' : '#ef4444'),
                         borderRadius: 4
                     }]
                 },
